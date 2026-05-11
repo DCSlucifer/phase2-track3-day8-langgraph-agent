@@ -17,19 +17,20 @@ Dự án này là một hệ thống Support Ticket Agent mạnh mẽ được x
 
 ### 📸 Evidence (Minh chứng)
 
-*(Bạn hãy dán các ảnh chụp màn hình UI máy bạn vào các vùng dưới đây)*
-
 **1. Giao diện chạy 15 Kịch bản & Biểu đồ Metrics**
-> *(Chèn ảnh Dashboard tổng quát với các chỉ số Pass Rate 100% vào đây)*
+![Dashboard Flow](docs/assets/dashboard_flow.png)
 
 **2. Modal chặn duyệt rủi ro (HITL)**
-> *(Chèn ảnh popup "Action Requires Approval" khi chạy kịch bản S04_risky vào đây)*
+![HITL Approval](docs/assets/hitl_modal.png)
 
 **3. Khôi phục sập nguồn (Crash-Resume)**
-> *(Chèn ảnh bảng Persistence báo hiệu ✅ State matches: Yes)*
+![Crash Resume](docs/assets/crash_resume.png)
 
 **4. Du hành thời gian (Time Travel)**
-> *(Chèn ảnh cột bên phải "State Inspector" khi ấn vào các node trong quá khứ)*
+![Time Travel](docs/assets/Time_Travel.png)
+
+**5. Luồng xử lý Scenario 7 (Dead Letter)**
+![Scenario 7](docs/assets/LangGraph-Agent-Lab_scenario7.png)
 
 ---
 
