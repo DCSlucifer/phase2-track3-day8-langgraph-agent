@@ -4,7 +4,7 @@
 
 - **Name**: Võ Thành Danh
 - **Student ID**: 2A202600503
-- **Date**: 2026-05-11 11:43:38
+- **Date**: 2026-05-11 12:38:01
 - **Repo/commit**: phase2-track3-day8-langgraph-agent
 
 ---
@@ -57,27 +57,27 @@ Danh sách các trường quan trọng và cách cập nhật (ghi đè hay ghi 
 - **Tổng số kịch bản**: 15
 - **Tỷ lệ thành công**: 100%
 - **Số node trung bình đi qua**: 6.7
-- **Tổng số lần retry**: 6
+- **Tổng số lần retry**: 7
 - **Tổng số lần interrupt (HITL)**: 5
 - **Xác thực Crash-resume**: ✅ Yes
 
 | Scenario | Expected route | Actual route | Success | Retries | Interrupts | Latency |
 |---|---|---|---|---:|---:|---|
-| S01_simple | simple | simple | ✅ | 0 | 0 | 43ms |
-| S02_tool | tool | tool | ✅ | 0 | 0 | 22ms |
-| S03_missing | missing_info | missing_info | ✅ | 0 | 0 | 17ms |
-| S04_risky | risky | risky | ✅ | 0 | 1 | 28ms |
-| S05_error | error | error | ✅ | 3 | 0 | 37ms |
-| S06_delete | risky | risky | ✅ | 0 | 1 | 28ms |
-| S07_dead_letter | error | error | ✅ | 1 | 0 | 19ms |
-| S08_cancel | risky | risky | ✅ | 0 | 1 | 28ms |
-| S09_track | tool | tool | ✅ | 0 | 0 | 22ms |
-| S10_vague | missing_info | missing_info | ✅ | 0 | 0 | 16ms |
-| S11_crash | error | error | ✅ | 2 | 0 | 35ms |
-| S12_remove | risky | risky | ✅ | 0 | 1 | 29ms |
-| S13_faq | simple | simple | ✅ | 0 | 0 | 16ms |
-| S14_search | tool | tool | ✅ | 0 | 0 | 22ms |
-| S15_revoke | risky | risky | ✅ | 0 | 1 | 30ms |
+| G01_simple | simple | simple | ✅ | 0 | 0 | 36ms |
+| G02_simple2 | simple | simple | ✅ | 0 | 0 | 16ms |
+| G03_tool | tool | tool | ✅ | 0 | 0 | 23ms |
+| G04_tool2 | tool | tool | ✅ | 0 | 0 | 24ms |
+| G05_tool3 | tool | tool | ✅ | 0 | 0 | 23ms |
+| G06_missing | missing_info | missing_info | ✅ | 0 | 0 | 16ms |
+| G07_missing2 | missing_info | missing_info | ✅ | 0 | 0 | 17ms |
+| G08_risky | risky | risky | ✅ | 0 | 1 | 29ms |
+| G09_risky2 | risky | risky | ✅ | 0 | 1 | 29ms |
+| G10_risky3 | risky | risky | ✅ | 0 | 1 | 29ms |
+| G11_risky4 | risky | risky | ✅ | 0 | 1 | 30ms |
+| G12_error | error | error | ✅ | 3 | 0 | 40ms |
+| G13_error2 | error | error | ✅ | 3 | 0 | 45ms |
+| G14_dead | error | error | ✅ | 1 | 0 | 20ms |
+| G15_mixed | risky | risky | ✅ | 0 | 1 | 29ms |
 
 ---
 
@@ -88,19 +88,19 @@ Phân tích ít nhất hai tình huống lỗi (Failure modes) đã được thi
 1. **Retry or tool failure (Công cụ gặp lỗi thoáng qua):**
    - **Tình huống**: Gọi tool bị lỗi mạng hoặc timeout.
    - **Cách giải quyết**: Đã implement `retry_or_fallback_node` và `evaluate_node`. Khi tool trả về lỗi (có chứa chữ "ERROR"), graph rẽ nhánh về node `retry`, tăng biến `attempt`. Vòng lặp sẽ tiếp diễn cho đến khi tool trả về kết quả đúng hoặc `attempt >= max_attempts`. Nếu vượt quá giới hạn, graph sẽ tự động đẩy luồng sang `dead_letter_node` thay vì rơi vào lặp vô tận.
-   - **Bằng chứng**: - **S05_error**: Đã thực hiện 3 lần retry, kết quả cuối: thành công=True
-- **S07_dead_letter**: Đã thực hiện 1 lần retry, kết quả cuối: thành công=True
-- **S11_crash**: Đã thực hiện 2 lần retry, kết quả cuối: thành công=True
+   - **Bằng chứng**: - **G12_error**: Đã thực hiện 3 lần retry, kết quả cuối: thành công=True
+- **G13_error2**: Đã thực hiện 3 lần retry, kết quả cuối: thành công=True
+- **G14_dead**: Đã thực hiện 1 lần retry, kết quả cuối: thành công=True
 
 
 2. **Risky action without approval (Hành động rủi ro cao chưa được duyệt):**
    - **Tình huống**: User yêu cầu "refund", "delete", "cancel", "revoke".
    - **Cách giải quyết**: Router sẽ ép buộc điều hướng sang đường `risky`. Luồng bắt buộc phải đi qua `risky_action_node` để chuẩn bị hồ sơ bằng chứng, rồi đi vào `approval_node`. Tại đây, graph sẽ tạm ngưng bằng lệnh `interrupt()` để đẩy popup lên Web UI chờ con người click "Approve" hoặc "Reject" rồi mới được đi tiếp đến `tool_node`.
-   - **Bằng chứng**: - **S04_risky**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
-- **S06_delete**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
-- **S08_cancel**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
-- **S12_remove**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
-- **S15_revoke**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+   - **Bằng chứng**: - **G08_risky**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **G09_risky2**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **G10_risky3**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **G11_risky4**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **G15_mixed**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
 
 
 ---

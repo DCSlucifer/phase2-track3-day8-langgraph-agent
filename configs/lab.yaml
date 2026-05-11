@@ -1,4 +1,4 @@
-scenarios_path: data/sample/scenarios.jsonl
+scenarios_path: data/sample/scenarios_hidden.jsonl
 checkpointer: sqlite
 report_path: reports/lab_report.md
 database_url: checkpoints.db
