@@ -1,83 +1,10 @@
-"""Report generation — auto-populates the lab report with real run data.
-
-Every time `make run-scenarios` executes, `write_report()` is called with the
-MetricsReport from the actual run, and a complete lab report is generated
-automatically. No manual editing needed.
-"""
-
-from __future__ import annotations
-
-from datetime import datetime
-from pathlib import Path
-
-from .metrics import MetricsReport
-
-
-def _crash_resume_text(resume_success: bool) -> str:
-    if resume_success:
-        return "Đã xác minh -- Checkpoint SQLite tồn tại sau khi restart process, không mất state."
-    return (
-        "Đang dùng MemorySaver (chỉ lưu trên RAM). "
-        "Hãy đổi sang `checkpointer: sqlite` trong lab.yaml để test crash-resume."
-    )
-
-
-def render_full_report(metrics: MetricsReport) -> str:
-    """Generate a complete lab report from real run data."""
-
-    # Build scenario results table
-    scenario_rows = []
-    for m in metrics.scenario_metrics:
-        scenario_rows.append(
-            f"| {m.scenario_id} | {m.expected_route} | {m.actual_route} "
-            f"| {'✅' if m.success else '❌'} | {m.retry_count} | {m.interrupt_count} "
-            f"| {m.latency_ms}ms |"
-        )
-    scenario_table = "\n".join(scenario_rows)
-
-    # Identify failures
-    failed = [m for m in metrics.scenario_metrics if not m.success]
-    failure_analysis = ""
-    if failed:
-        for f in failed:
-            failure_analysis += (
-                f"- **{f.scenario_id}**: Kỳ vọng `{f.expected_route}`, "
-                f"nhưng thực tế chạy `{f.actual_route}`. Lỗi: {f.errors}\n"
-            )
-    else:
-        failure_analysis = "Tất cả các scenario đều pass thành công. Không phát hiện sai lệch định tuyến (routing mismatch)."
-
-    # Identify retry scenarios
-    retry_scenarios = [m for m in metrics.scenario_metrics if m.retry_count > 0]
-    retry_analysis = ""
-    if retry_scenarios:
-        for r in retry_scenarios:
-            retry_analysis += f"- **{r.scenario_id}**: Đã thực hiện {r.retry_count} lần retry, kết quả cuối: thành công={r.success}\n"
-    else:
-        retry_analysis = "Không có scenario nào phải kích hoạt retry."
-
-    # Identify HITL scenarios
-    hitl_scenarios = [m for m in metrics.scenario_metrics if m.approval_required]
-    hitl_analysis = ""
-    if hitl_scenarios:
-        for h in hitl_scenarios:
-            hitl_analysis += (
-                f"- **{h.scenario_id}**: Cần phê duyệt (approval_required={h.approval_required}), "
-                f"đã phát hiện ngắt để duyệt (interrupts={h.interrupt_count})\n"
-            )
-    else:
-        hitl_analysis = "Không có scenario nào cần sự can thiệp của con người (HITL)."
-
-
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    return f"""# Day 08 Lab Report — LangGraph Agentic Orchestration
+# Day 08 Lab Report — LangGraph Agentic Orchestration
 
 ## 1. Team / student
 
 - **Name**: Võ Thành Danh
 - **Student ID**: 2A202600503
-- **Date**: {now}
+- **Date**: 2026-05-11 11:43:38
 - **Repo/commit**: phase2-track3-day8-langgraph-agent
 
 ---
@@ -127,16 +54,30 @@ Danh sách các trường quan trọng và cách cập nhật (ghi đè hay ghi 
 ## 4. Scenario results
 
 **Tóm tắt kết quả (Key metrics từ `outputs/metrics.json`)**:
-- **Tổng số kịch bản**: {metrics.total_scenarios}
-- **Tỷ lệ thành công**: {metrics.success_rate:.0%}
-- **Số node trung bình đi qua**: {metrics.avg_nodes_visited:.1f}
-- **Tổng số lần retry**: {metrics.total_retries}
-- **Tổng số lần interrupt (HITL)**: {metrics.total_interrupts}
-- **Xác thực Crash-resume**: {'✅ Yes' if metrics.resume_success else '❌ No'}
+- **Tổng số kịch bản**: 15
+- **Tỷ lệ thành công**: 100%
+- **Số node trung bình đi qua**: 6.7
+- **Tổng số lần retry**: 6
+- **Tổng số lần interrupt (HITL)**: 5
+- **Xác thực Crash-resume**: ✅ Yes
 
 | Scenario | Expected route | Actual route | Success | Retries | Interrupts | Latency |
 |---|---|---|---|---:|---:|---|
-{scenario_table}
+| S01_simple | simple | simple | ✅ | 0 | 0 | 43ms |
+| S02_tool | tool | tool | ✅ | 0 | 0 | 22ms |
+| S03_missing | missing_info | missing_info | ✅ | 0 | 0 | 17ms |
+| S04_risky | risky | risky | ✅ | 0 | 1 | 28ms |
+| S05_error | error | error | ✅ | 3 | 0 | 37ms |
+| S06_delete | risky | risky | ✅ | 0 | 1 | 28ms |
+| S07_dead_letter | error | error | ✅ | 1 | 0 | 19ms |
+| S08_cancel | risky | risky | ✅ | 0 | 1 | 28ms |
+| S09_track | tool | tool | ✅ | 0 | 0 | 22ms |
+| S10_vague | missing_info | missing_info | ✅ | 0 | 0 | 16ms |
+| S11_crash | error | error | ✅ | 2 | 0 | 35ms |
+| S12_remove | risky | risky | ✅ | 0 | 1 | 29ms |
+| S13_faq | simple | simple | ✅ | 0 | 0 | 16ms |
+| S14_search | tool | tool | ✅ | 0 | 0 | 22ms |
+| S15_revoke | risky | risky | ✅ | 0 | 1 | 30ms |
 
 ---
 
@@ -147,12 +88,20 @@ Phân tích ít nhất hai tình huống lỗi (Failure modes) đã được thi
 1. **Retry or tool failure (Công cụ gặp lỗi thoáng qua):**
    - **Tình huống**: Gọi tool bị lỗi mạng hoặc timeout.
    - **Cách giải quyết**: Đã implement `retry_or_fallback_node` và `evaluate_node`. Khi tool trả về lỗi (có chứa chữ "ERROR"), graph rẽ nhánh về node `retry`, tăng biến `attempt`. Vòng lặp sẽ tiếp diễn cho đến khi tool trả về kết quả đúng hoặc `attempt >= max_attempts`. Nếu vượt quá giới hạn, graph sẽ tự động đẩy luồng sang `dead_letter_node` thay vì rơi vào lặp vô tận.
-   - **Bằng chứng**: {retry_analysis}
+   - **Bằng chứng**: - **S05_error**: Đã thực hiện 3 lần retry, kết quả cuối: thành công=True
+- **S07_dead_letter**: Đã thực hiện 1 lần retry, kết quả cuối: thành công=True
+- **S11_crash**: Đã thực hiện 2 lần retry, kết quả cuối: thành công=True
+
 
 2. **Risky action without approval (Hành động rủi ro cao chưa được duyệt):**
    - **Tình huống**: User yêu cầu "refund", "delete", "cancel", "revoke".
    - **Cách giải quyết**: Router sẽ ép buộc điều hướng sang đường `risky`. Luồng bắt buộc phải đi qua `risky_action_node` để chuẩn bị hồ sơ bằng chứng, rồi đi vào `approval_node`. Tại đây, graph sẽ tạm ngưng bằng lệnh `interrupt()` để đẩy popup lên Web UI chờ con người click "Approve" hoặc "Reject" rồi mới được đi tiếp đến `tool_node`.
-   - **Bằng chứng**: {hitl_analysis}
+   - **Bằng chứng**: - **S04_risky**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **S06_delete**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **S08_cancel**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **S12_remove**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+- **S15_revoke**: Cần phê duyệt (approval_required=True), đã phát hiện ngắt để duyệt (interrupts=1)
+
 
 ---
 
@@ -163,7 +112,7 @@ Giải thích cách sử dụng checkpointer, thread id, state history và crash
 - **Checkpointer**: Đã thiết lập thành công `SqliteSaver.from_conn_string("crash_demo.db")`.
 - **Thread ID**: Mỗi kịch bản (scenario) được cấp một `thread_id` duy nhất (`thread-S01`, `thread-S02`). Việc này đảm bảo state của các câu hỏi khác nhau không bị ghi đè lên nhau trong Database.
 - **State history**: Cấu trúc append-only cho phép gọi API `graph.get_state_history()` để lấy toàn bộ danh sách snapshot trong quá khứ, qua đó xây dựng tính năng "Time Travel" trên Web Dashboard (cho phép xem lại state ở từng step cụ thể).
-- **Crash-resume evidence**: Đã build tính năng mô phỏng sập máy chủ trên Dashboard. Kết quả: {_crash_resume_text(metrics.resume_success)}
+- **Crash-resume evidence**: Đã build tính năng mô phỏng sập máy chủ trên Dashboard. Kết quả: Đã xác minh -- Checkpoint SQLite tồn tại sau khi restart process, không mất state.
 
 ---
 
@@ -189,11 +138,3 @@ Nếu có thêm một ngày để đưa hệ thống lên production, tôi sẽ 
 2. **Tích hợp API Thực (Real Tool Integration)**: Nối `tool_node` với API thật của CRM/ERP (Salesforce, Stripe) thay vì trả về mock string.
 3. **Cơ chế Exponential Backoff**: Áp dụng độ trễ tăng dần (ví dụ: 2s, 4s, 8s) khi gọi tool thất bại để tránh làm sập API bên thứ 3 (Thundering herd problem).
 4. **OpenTelemetry / Tracing**: Bổ sung LangSmith hoặc Datadog để trace từng span nhỏ nhất của mỗi node trên hệ thống phân tán.
-"""
-
-
-def write_report(metrics: MetricsReport, output_path: str | Path) -> None:
-    """Write the auto-generated report to the specified path."""
-    path = Path(output_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_full_report(metrics), encoding="utf-8")
