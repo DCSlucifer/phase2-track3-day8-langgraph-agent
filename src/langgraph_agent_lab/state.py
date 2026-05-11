@@ -1,14 +1,19 @@
 """State schema for the Day 08 LangGraph lab.
 
-Students should extend the schema only when needed. Keep state lean and serializable.
+Design decisions:
+- Append-only fields (messages, tool_results, errors, events) use Annotated[list, add]
+  for auditability — every node appends, nothing is lost.
+- Scalar fields (route, attempt, final_answer, etc.) are plain overwrite — only the
+  latest value matters for routing decisions.
+- State is fully serializable (str, int, bool, dict, list) for checkpoint compatibility.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
+from operator import add
 from typing import Annotated, Any, TypedDict
 
-from operator import add
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -41,22 +46,32 @@ class ApprovalDecision(BaseModel):
 class AgentState(TypedDict, total=False):
     """LangGraph state.
 
-    TODO(student): decide which fields should be append-only and which should be overwritten.
-    The current annotations give a safe starting point for auditability.
+    Reducer strategy:
+    - Append-only (Annotated[list, add]): messages, tool_results, errors, events
+      → preserves full audit trail across all nodes for grading and debugging.
+    - Overwrite (plain fields): route, attempt, final_answer, evaluation_result, etc.
+      → only the current value matters for routing/control flow.
     """
 
+    # --- Identity (overwrite) ---
     thread_id: str
     scenario_id: str
     query: str
+
+    # --- Routing & control (overwrite) ---
     route: str
     risk_level: str
     attempt: int
     max_attempts: int
+    evaluation_result: str | None
+
+    # --- Outputs (overwrite) ---
     final_answer: str | None
     pending_question: str | None
     proposed_action: str | None
     approval: dict[str, Any] | None
-    evaluation_result: str | None
+
+    # --- Audit trail (append-only via `add` reducer) ---
     messages: Annotated[list[str], add]
     tool_results: Annotated[list[str], add]
     errors: Annotated[list[str], add]
