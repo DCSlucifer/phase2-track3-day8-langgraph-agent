@@ -81,7 +81,7 @@ async def serve_dashboard() -> HTMLResponse:
 async def list_scenarios() -> list[dict]:
     """List all scenarios from JSONL file."""
     try:
-        scenarios = load_scenarios("data/sample/scenarios.jsonl")
+        scenarios = load_scenarios("data/sample/scenarios_hidden.jsonl")
         return [s.model_dump() for s in scenarios]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -98,7 +98,7 @@ async def run_single(req: RunRequest) -> dict:
         scenario = Scenario(id=req.scenario_id or "custom", query=req.query, expected_route=route)
     elif req.scenario_id:
         # Find scenario by ID
-        scenarios = load_scenarios("data/sample/scenarios.jsonl")
+        scenarios = load_scenarios("data/sample/scenarios_hidden.jsonl")
         found = [s for s in scenarios if s.id == req.scenario_id]
         if not found:
             raise HTTPException(status_code=404, detail=f"Scenario {req.scenario_id} not found")
@@ -152,7 +152,7 @@ async def resume_graph(req: ResumeRequest) -> dict:
     
     run_config = {"configurable": {"thread_id": req.thread_id}}
     
-    scenarios = load_scenarios("data/sample/scenarios.jsonl")
+    scenarios = load_scenarios("data/sample/scenarios_hidden.jsonl")
     found = [s for s in scenarios if s.id == req.scenario_id]
     scenario = found[0] if found else None
 
@@ -198,7 +198,7 @@ async def run_all() -> dict:
     import os
     os.environ["LANGGRAPH_INTERRUPT"] = "false"
 
-    scenarios = load_scenarios("data/sample/scenarios.jsonl")
+    scenarios = load_scenarios("data/sample/scenarios_hidden.jsonl")
     metrics = []
     results = []
 
