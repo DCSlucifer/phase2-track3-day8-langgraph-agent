@@ -17,6 +17,8 @@ Dự án này là một hệ thống Support Ticket Agent mạnh mẽ được x
 
 ### 📸 Evidence (Minh chứng)
 
+> **Lưu ý:** Các ảnh chụp màn hình minh chứng dưới đây được thực hiện trên Web Dashboard dựa theo bộ dữ liệu mẫu (`data/sample/scenarios.jsonl`), trong khi kết quả Báo cáo (Report) chính thức bên trên được chạy dựa trên bộ dữ liệu chấm điểm ẩn (`data/sample/scenarios_hidden.jsonl`).
+
 **1. Giao diện chạy 15 Kịch bản & Biểu đồ Metrics**
 ![Dashboard Flow](docs/assets/dashboard_flow.png)
 
